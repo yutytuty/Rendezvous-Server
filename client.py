@@ -5,7 +5,7 @@ from curses import wrapper
 from curses.textpad import rectangle
 from time import sleep
 
-RENDEZVOUS = ("localhost", 5678)
+RENDEZVOUS = ("ad.dr.es.:)", 5678)
 
 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -13,6 +13,8 @@ s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 connection_established = Event()
 ready_for_gui = Event()
 send_message_event = Event()
+new_messages_event = Event()
+clear_text_event = Event()
 
 username = input("username: ")
 
@@ -43,7 +45,9 @@ def connection_thread(address: tuple[str, int]):
         if send_message_event.is_set():
             s.sendto(f"{username}> {text}".encode(), address)
             messages.append(f"{username}> {text}")
+            new_messages_event.set()
             text = ""
+            clear_text_event.set()
             send_message_event = Event()
 
 
@@ -58,6 +62,7 @@ def listening_thread():
         data, _ = s.recvfrom(2048)
         data = data.decode()
         messages.append(data)
+        new_messages_event.set()
 
 
 def draw_messages(scr: curses.window, messages_arr: list[str]):
@@ -78,12 +83,16 @@ def logic_init():
 def gui_main(scr: curses.window):
     global text
     global messages
-
-    while not ready_for_gui.is_set():
-        pass
+    global new_messages_event
+    global clear_text_event
 
     scr.nodelay(True)
     window_size = (curses.LINES - 1, curses.COLS - 1)
+
+    rectangle(scr, window_size[0] - 3, 0,
+              window_size[0] - 1, window_size[1])
+    rectangle(scr, 0, 0, window_size[0] - 4, window_size[1])
+    scr.addstr(window_size[0] - 2, 2, "")
 
     while True:
         try:
@@ -93,27 +102,40 @@ def gui_main(scr: curses.window):
 
         if 31 < key < 127:
             text += chr(key)
+            scr.addstr(window_size[0] - 2, 2, text)
+            scr.refresh()
         if key == 127:
             if len(text) > 0:
                 text = text[:-1]
         if key == 27:
             break
         if key == 10:
-            # messages.append(text)
             send_message_event.set()
-            # text = ""
 
-        scr.clear()
-        rectangle(scr, window_size[0] - 3, 0,
-                  window_size[0] - 1, window_size[1])
-        draw_messages(scr, messages)
-        rectangle(scr, 0, 0, window_size[0] - 4, window_size[1])
-        scr.addstr(window_size[0] - 2, 2, text)
-        scr.refresh()
-        sleep(0.04)
+        if new_messages_event.is_set():
+            draw_messages(scr, messages)
+            scr.addstr(window_size[0] - 2, 2, "")
+            scr.refresh()
+            new_messages_event = Event()
+
+        if clear_text_event.is_set():
+            scr.addstr(window_size[0] - 2, 2, " " * (window_size[1] - 2))
+            scr.addstr(window_size[0] - 2, 2, "")
+            clear_text_event = Event()
+
+        # scr.clear()
+        # rectangle(scr, window_size[0] - 3, 0,
+        #           window_size[0] - 1, window_size[1])
+        # draw_messages(scr, messages)
+        # rectangle(scr, 0, 0, window_size[0] - 4, window_size[1])
+        # scr.addstr(window_size[0] - 2, 2, text)
+        # scr.refresh()
+        # sleep(0.04)
 
 
 logic_init()
 
+while not ready_for_gui.is_set():
+    pass
 
 wrapper(gui_main)
