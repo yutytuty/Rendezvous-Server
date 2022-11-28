@@ -5,7 +5,7 @@ from curses import wrapper
 from curses.textpad import rectangle
 from time import sleep
 
-RENDEZVOUS = ("ad.dr.es.:)", 5678)
+RENDEZVOUS = ("localhost", 5678)
 
 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -137,5 +137,7 @@ logic_init()
 
 while not ready_for_gui.is_set():
     pass
+
+sleep(0.5)
 
 wrapper(gui_main)
