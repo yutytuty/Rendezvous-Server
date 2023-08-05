@@ -1,5 +1,13 @@
 # Peer2Peer Messaging
 
+---
+#### How to run
+1. Download the repository with: `git clone https://github.com/yutytuty/Rendezvous-Server.git`
+2. Change the `ADDR` constant at the top of the `server.py` and the `RENDEZVOUS` constant at the top of `client.py` to your desired address, although running on localhost works out of the box.
+3. Run the server with `python3 server.py`
+4. Run both clients with `python3 client.py`
+5. When both clients are connected, a chat window will open up in the terminal and messaging will work.
+---
 #### protocol
 
 1. Server opens udp punchole
